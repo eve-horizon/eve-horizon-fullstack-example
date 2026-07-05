@@ -9,7 +9,7 @@ FROM node:22-slim AS build
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10 --activate
 
 COPY package.json ./
 RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
