@@ -5,19 +5,20 @@ if (!rawDatabaseUrl) {
   throw new Error('DATABASE_URL is required');
 }
 
-const isLocal =
-  rawDatabaseUrl.includes('localhost') || rawDatabaseUrl.includes('127.0.0.1');
-
-// Managed DBs set sslmode=require. pg v8 treats that as verify-full,
-// which fails without the provider's CA cert. Replace with no-verify
-// until the platform trust store is available (see managed-db-tls-trust-plan).
-const databaseUrl = isLocal
-  ? rawDatabaseUrl
-  : rawDatabaseUrl.replace(/sslmode=[^&]+/, 'sslmode=no-verify');
+// Trust the URL: hosted managed DBs set sslmode=require; local k3d managed
+// DBs omit sslmode entirely (plain in-cluster Postgres). pg v8 treats
+// sslmode=require as verify-full, which fails without the provider's CA
+// cert, so downgrade to no-verify until the platform trust store lands
+// (see managed-db-tls-trust-plan).
+const sslmode = /[?&]sslmode=([a-z-]+)/.exec(rawDatabaseUrl)?.[1];
+const wantsSsl = sslmode !== undefined && sslmode !== 'disable';
+const databaseUrl = wantsSsl
+  ? rawDatabaseUrl.replace(/sslmode=[^&]+/, 'sslmode=no-verify')
+  : rawDatabaseUrl;
 
 export const pool = new Pool({
   connectionString: databaseUrl,
-  ssl: isLocal ? false : { rejectUnauthorized: false },
+  ssl: wantsSsl ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,
