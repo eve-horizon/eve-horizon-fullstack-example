@@ -14,7 +14,7 @@ Before any work, load the Eve docs skill and review CLI guidance:
 
 ```bash
 openskills read eve-read-eve-docs
-cat .agent/skills/eve-read-eve-docs/references/cli.md
+cat .agents/skills/eve-read-eve-docs/references/cli.md
 ```
 
 This ensures CLI commands, `--repo-dir`, and deploy flows are current.
@@ -54,7 +54,7 @@ This repo ships agent runtime config under `agents/` and declares paths in `.eve
 Sync configuration after changes:
 
 ```bash
-eve agents sync --project proj_xxx --ref main --repo-dir .
+eve project sync --project proj_xxx --ref main --dir .
 ```
 
 Simulate chat routing without Slack:
@@ -445,9 +445,8 @@ apps/
 
 ### Schema Location
 
-- **Migrations**: `.eve/migrations/` (auto-applied on deploy)
-- **Local schema**: `db/schema.sql` (for docker-compose)
-- **Seed data**: `db/seed.sql`
+- **Migrations**: `db/migrations/` (applied by the migration job)
+- **Local seed data**: `db/seed.sql`
 
 ### RLS Pattern
 

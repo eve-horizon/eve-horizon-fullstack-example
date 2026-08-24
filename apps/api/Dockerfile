@@ -36,7 +36,7 @@ FROM node:22-slim AS production
 WORKDIR /app
 
 # OCI image labels — links this package to the source repo in GHCR
-LABEL org.opencontainers.image.source="https://github.com/OWNER/REPO"
+LABEL org.opencontainers.image.source="https://github.com/eve-horizon/eve-horizon-fullstack-example"
 LABEL org.opencontainers.image.description="API service"
 
 # Create non-root user for security

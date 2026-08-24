@@ -21,5 +21,5 @@ Skills are installed via `eve-skillpacks`. Key skills for this repo:
 Agent runtime config lives in `agents/`. After editing, sync it:
 
 ```bash
-eve agents sync --project proj_xxx --ref main --repo-dir .
+eve project sync --project proj_xxx --ref main --dir .
 ```

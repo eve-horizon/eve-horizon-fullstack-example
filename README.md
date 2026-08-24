@@ -21,11 +21,8 @@ eve project ensure \
   --repo-url https://github.com/eve-horizon/eve-horizon-fullstack-example \
   --branch main
 
-# 2. Sync the manifest (pushes .eve/manifest.yaml to Eve)
-eve project sync
-
-# 2b. Sync agent + chat config
-eve agents sync --project <project-id> --ref main --repo-dir .
+# 2. Sync the manifest + agent/chat config from this checkout
+eve project sync --project <project-id> --ref main --dir .
 
 # 3. Inspect pipelines
 eve pipeline list --project <project-id>
@@ -99,7 +96,7 @@ eve auth bootstrap --email admin@example.com --public-key ~/.ssh/id_ed25519.pub
 Then login with SSH challenge/verify:
 
 ```bash
-eve auth login --email admin@example.com --private-key ~/.ssh/id_ed25519
+eve auth login --email admin@example.com --ssh-key ~/.ssh/id_ed25519
 ```
 
 ### Webhook Secrets
@@ -127,13 +124,11 @@ docker build -t ghcr.io/eve-horizon/eve-horizon-fullstack-example-web:latest app
 
 The `.eve/manifest.yaml` defines:
 
-- **components**: Docker images for api and web
-- **environments**: test, staging, production with resource limits
-- **databases**: Postgres database shared across environments
-- **apis**: OpenAPI source for the API (used by `eve api` commands)
-- **migrations**: SQL migrations for the environment database
+- **services**: buildable api/web containers, a migration job, and managed Postgres
+- **environments**: test, staging, and approval-gated production targets
+- **x-eve**: agent, chat, AgentPack, API-spec, and managed-database configuration
+- **migrations**: SQL files mounted into the migration job
 - **registry**: container registry settings for build actions
-- **tests**: smoke test command references
 - **pipelines**: deterministic build/release/deploy actions per env + CI triggers
 - **triggers**: embedded in pipelines via `trigger.github` or `trigger.system`
 - **workflows**: manual operations and remediation
@@ -227,9 +222,11 @@ eve build diagnose <build_id>
 ```
 .
 ├── .eve/
-│   ├── manifest.yaml    # Eve Horizon configuration
+│   ├── manifest.yaml     # Eve Horizon configuration
+│   ├── access.yaml       # Example scoped access policy
+│   ├── packs.lock.yaml   # Resolved AgentPack inputs
 │   └── hooks/
-│       └── on-clone.sh  # Post-clone setup script
+│       └── on-clone.sh   # Post-clone setup script
 ├── agents/
 │   ├── agents.yaml       # Agent definitions
 │   ├── teams.yaml        # Team composition + dispatch
@@ -242,10 +239,12 @@ eve build diagnose <build_id>
 │       ├── Dockerfile
 │       └── src/
 ├── db/
-│   ├── schema.sql       # Database schema
-│   └── seed.sql         # Seed data
-├── skills/              # Eve skills
-│   └── eve-horizon-dev/
+│   ├── migrations/      # Managed-database migrations
+│   └── seed.sql         # Local seed data
+├── packs/
+│   └── notes-ops/       # Inline example AgentPack
+├── scripts/
+│   └── smoke-test.sh    # Post-deploy smoke test
 ├── docker-compose.yml   # Local development
 └── skills.txt           # Skill manifest
 ```
