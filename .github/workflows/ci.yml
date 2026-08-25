@@ -58,7 +58,12 @@ jobs:
           bash -n scripts/backup-db.sh scripts/smoke-test.sh
 
       - name: Preview AgentPack resolution with the released CLI
-        run: npx --yes @eve-horizon/cli@0.2.72 packs resolve --dry-run --path .
+        run: npx --yes @eve-horizon/cli@0.2.73 packs resolve --dry-run --path .
+
+      - name: Prove vendored runtime skills work without fetching
+        run: |
+          npx --yes @eve-horizon/cli@0.2.73 skills materialize manifest --runtime --mode copy
+          git diff --exit-code -- .eve/materialized-skills
 
       - name: Reject private scope and credential-shaped values
         run: |

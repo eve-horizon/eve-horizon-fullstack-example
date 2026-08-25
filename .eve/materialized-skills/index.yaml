@@ -1,0 +1,24 @@
+version: 1
+sources:
+  - id: eve-software-factory-ac6e2ee2ca55
+    source: eve-horizon/eve-software-factory
+    ref: 72ed321b9dee7ae497e7ff60486aa2e8657d365f
+    origin: manifest-pack
+    source_type: remote
+    skills:
+      - install_name: factory-coder
+        source_path: skills/factory-coder
+        content_hash: sha256:aec49c31b17cb7d0e6eaa73225cbbb1554b9864b0c360bf37795beaac4594494
+        materialized_path: eve-software-factory-ac6e2ee2ca55/factory-coder
+      - install_name: factory-planner
+        source_path: skills/factory-planner
+        content_hash: sha256:3c8c852ccc83c305db8154adb09c363dcd6e13d79b3efea12c91e4bb11d6699a
+        materialized_path: eve-software-factory-ac6e2ee2ca55/factory-planner
+      - install_name: factory-pm
+        source_path: skills/factory-pm
+        content_hash: sha256:95d7ae65b1d88b28a7b09f17f5539a2b052b462357c0548d6d8e312de7c54000
+        materialized_path: eve-software-factory-ac6e2ee2ca55/factory-pm
+      - install_name: factory-verifier
+        source_path: skills/factory-verifier
+        content_hash: sha256:1f473da934de74c90b6471b0c8d46475555a16dfdcbac91b36904aac483fd145
+        materialized_path: eve-software-factory-ac6e2ee2ca55/factory-verifier

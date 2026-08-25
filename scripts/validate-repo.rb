@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require "pathname"
+require "digest"
 require "yaml"
 
 root = Pathname.new(__dir__).join("..").expand_path
@@ -41,6 +42,27 @@ fail!("effective pack hashes drifted") unless lock["effective"].slice("agents_ha
   "teams_hash" => "6660768d",
   "chat_hash" => "3e490cc0"
 }
+
+vendored_index = load_yaml(root.join(".eve/materialized-skills/index.yaml"))
+vendored_factory = vendored_index.fetch("sources", []).find { |source| source["source"] == factory["source"] }
+fail!("vendored factory source missing") unless vendored_factory
+fail!("vendored factory ref drift") unless vendored_factory["ref"] == factory["ref"]
+expected_factory_skills = %w[factory-coder factory-planner factory-pm factory-verifier]
+actual_factory_skills = vendored_factory.fetch("skills", []).map { |skill| skill["install_name"] }.sort
+fail!("vendored factory skill set drifted") unless actual_factory_skills == expected_factory_skills
+
+vendored_factory.fetch("skills").each do |skill|
+  directory = root.join(".eve/materialized-skills", skill.fetch("materialized_path"))
+  fail!("vendored skill directory missing: #{directory}") unless directory.directory?
+  digest = Digest::SHA256.new
+  directory.glob("**/*").select(&:file?).sort.each do |file|
+    digest.update(file.relative_path_from(directory).to_s)
+    digest.update("\0")
+    digest.update(file.binread)
+    digest.update("\0")
+  end
+  fail!("vendored skill hash drift: #{skill['install_name']}") unless "sha256:#{digest.hexdigest}" == skill["content_hash"]
+end
 
 services = manifest.fetch("services", {})
 %w[api web].each do |name|
@@ -98,4 +120,4 @@ root.join("skills.txt").read.each_line do |line|
   end
 end
 
-puts "Repository validation passed: public pack pin, manifest, pipelines, buckets, migrations and fixtures"
+puts "Repository validation passed: public pack pin, vendored runtime skills, manifest, pipelines, buckets, migrations and fixtures"
