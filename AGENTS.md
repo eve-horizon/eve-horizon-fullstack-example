@@ -2,7 +2,7 @@
 
 > **Purpose**: Living document for AI agents. This repo is the canonical example for Eve Horizon projects.
 >
-> **Last Updated**: 2026-02-04
+> **Last Updated**: 2026-08-25
 
 For human documentation (setup, endpoints, directory structure), see [README.md](./README.md).
 
@@ -13,7 +13,7 @@ For human documentation (setup, endpoints, directory structure), see [README.md]
 Before any work, load the Eve docs skill and review CLI guidance:
 
 ```bash
-openskills read eve-read-eve-docs
+eve skills install
 cat .agents/skills/eve-read-eve-docs/references/cli.md
 ```
 
@@ -92,6 +92,7 @@ This repo works alongside `../eve-horizon` (the main Eve Horizon project).
 | --- | --- | --- |
 | eve-horizon | `../eve-horizon` | Source of truth for Eve CLI, manifest spec, deployment model |
 | eve-skillpacks | `../eve-skillpacks` | Published skills (referenced in `skills.txt`) |
+| eve-software-factory | public pinned pack; optional `../eve-software-factory` override | Factory relay AgentPack used by the manifest |
 
 ### CRITICAL: Read-Only Access to Sister Repos
 
@@ -123,21 +124,20 @@ Use the `eve-repo-upkeep` skill to check this repo against platform conventions:
 The `.eve/manifest.yaml` uses the v2 compose specification:
 
 ```yaml
-schema: eve/compose/v1
+schema: eve/compose/v2
 project: fullstack-example
 
-# Container registry for images
-registry:
-  host: ghcr.io
-  namespace: eve-horizon
-  auth:
-    username_secret: GHCR_USERNAME
-    token_secret: GHCR_TOKEN
+# Eve-native registry; the platform owns auth and image naming
+registry: eve
+
+x-eve:
+  packs:
+    - source: eve-horizon/eve-software-factory
+      ref: 72ed321b9dee7ae497e7ff60486aa2e8657d365f
 
 # Services (Docker Compose style with x-eve extensions)
 services:
   api:
-    image: ghcr.io/eve-horizon/eve-horizon-fullstack-example-api
     build:
       context: ./apps/api
       dockerfile: ./apps/api/Dockerfile
@@ -149,18 +149,27 @@ services:
       api_spec:
         type: openapi
         spec_url: /openapi.json
+      object_store:
+        buckets:
+          - { name: uploads, visibility: private }
+          - { name: assets, visibility: public }
 
   web:
-    image: ghcr.io/eve-horizon/eve-horizon-fullstack-example-web
+    build:
+      context: ./apps/web
+      dockerfile: ./apps/web/Dockerfile
     ports: [80]
     depends_on:
       api:
         condition: service_healthy
 
   db:
-    image: postgres:16
     x-eve:
-      role: database
+      role: managed_db
+      managed:
+        class: db.p1
+        engine: postgres
+        engine_version: "16"
 
 # Environments (pipeline assignments)
 environments:
@@ -258,10 +267,10 @@ eve project ensure --name fullstack-example \
   --branch main
 
 # 3. Build and import images to k3d
-docker build -t ghcr.io/eve-horizon/eve-horizon-fullstack-example-api:local apps/api
-docker build -t ghcr.io/eve-horizon/eve-horizon-fullstack-example-web:local apps/web
-k3d image import ghcr.io/eve-horizon/eve-horizon-fullstack-example-api:local -c eve-local
-k3d image import ghcr.io/eve-horizon/eve-horizon-fullstack-example-web:local -c eve-local
+docker build -t fullstack-example-api:local apps/api
+docker build -t fullstack-example-web:local apps/web
+k3d image import fullstack-example-api:local -c eve-local
+k3d image import fullstack-example-web:local -c eve-local
 
 # 4. Deploy with local tag (--ref required)
 eve env deploy test --ref main --repo-dir .
@@ -500,7 +509,7 @@ Skills are installed via `eve-skillpacks` (see `skills.txt`). Key skills:
 | `eve-troubleshooting` | CLI-first diagnostics |
 | `eve-local-dev-loop` | Docker Compose local dev |
 
-Run `openskills list` to see all installed skills.
+Inspect `.agents/skills/` to see the installed skills.
 
 ---
 
@@ -520,7 +529,7 @@ kubectl -n eve-torg-fullstack-example-test exec deploy/api -- env | grep DATABAS
 
 ```bash
 # Ensure images are imported to k3d
-k3d image import ghcr.io/eve-horizon/eve-horizon-fullstack-example-api:local -c eve-local
+k3d image import fullstack-example-api:local -c eve-local
 ```
 
 ### "Pipeline failed"
@@ -538,6 +547,9 @@ kubectl -n eve logs deployment/eve-worker --tail=100
 
 ## Update Log
 
+- **2026-08-25**: Pinned the public software-factory AgentPack, added CI and
+  root build/test/validation commands, restored the supported object-store
+  example, and added the referenced database-backup script.
 - **2026-01-22**: Created AGENTS.md with comprehensive agent guide
 - **2026-01-22**: Added event-driven pipelines and workflows to manifest
 - **2026-01-22**: Added component healthchecks, dependencies, and migrations
@@ -570,7 +582,7 @@ kubectl -n eve logs deployment/eve-worker --tail=100
 When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
 
 How to use skills:
-- Invoke: Bash("openskills read <skill-name>")
+- Read: `.agents/skills/<skill-name>/SKILL.md`
 - The skill content will load with detailed instructions on how to complete the task
 - Base directory provided in output for resolving bundled resources (references/, scripts/, assets/)
 

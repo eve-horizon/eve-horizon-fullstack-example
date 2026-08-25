@@ -1,6 +1,7 @@
 # Eve Horizon Fullstack Example
 
-Canonical example repo for Eve Horizon, demonstrating persistent environments and Docker-based deployments.
+Canonical public example repo for Eve Horizon, demonstrating persistent
+environments, managed data, AgentPacks, and Docker-based deployments.
 
 **Stack:**
 - React (Vite) frontend in `apps/web`
@@ -50,6 +51,19 @@ Test routing without Slack:
 eve chat simulate slack --project <project-id> \
   --team-id T123 --channel C456 --user U789 --text "hello"
 ```
+
+### Public Software Factory AgentPack
+
+The manifest resolves `eve-horizon/eve-software-factory` at a full commit SHA;
+an anonymous clone does not need a sibling checkout or private-org access. For
+co-development only, temporarily replace that manifest entry with:
+
+```yaml
+- source: ../eve-software-factory
+```
+
+Run `eve project sync ... --local --allow-dirty` while using the override, then
+restore the pinned public source before committing.
 
 ### Resource Refs (Org Docs + Attachments)
 
@@ -114,10 +128,10 @@ The project includes Dockerfiles for both components:
 
 ```bash
 # Build API image
-docker build -t ghcr.io/eve-horizon/eve-horizon-fullstack-example-api:latest apps/api
+docker build -t fullstack-example-api:local apps/api
 
 # Build Web image
-docker build -t ghcr.io/eve-horizon/eve-horizon-fullstack-example-web:latest apps/web
+docker build -t fullstack-example-web:local apps/web
 ```
 
 ## Manifest Structure
@@ -127,6 +141,7 @@ The `.eve/manifest.yaml` defines:
 - **services**: buildable api/web containers, a migration job, and managed Postgres
 - **environments**: test, staging, and approval-gated production targets
 - **x-eve**: agent, chat, AgentPack, API-spec, and managed-database configuration
+- **object storage**: one private uploads bucket and one public assets bucket
 - **migrations**: SQL files mounted into the migration job
 - **registry**: container registry settings for build actions
 - **pipelines**: deterministic build/release/deploy actions per env + CI triggers
@@ -149,6 +164,15 @@ npm run dev
 cd apps/web
 npm install
 npm run dev
+```
+
+From the repository root, the same commands CI uses are available:
+
+```bash
+npm run install:apps
+npm run build
+npm test
+npm run validate
 ```
 
 **Default endpoints:**
@@ -204,7 +228,8 @@ eve build diagnose <build_id>
 - **Kaniko** (fallback) - Rootless builds in restricted environments
 
 **Image Registry:**
-- Images are pushed to `ghcr.io/eve-horizon/eve-horizon-fullstack-example-{service}`
+- The manifest uses Eve's native registry; instance authentication and image
+  names are resolved by the platform rather than hard-coded in this repo.
 - Releases reference images by digest (immutable) rather than tag
 - Digests ensure exactly the same image is deployed across environments
 
@@ -244,7 +269,11 @@ eve build diagnose <build_id>
 ├── packs/
 │   └── notes-ops/       # Inline example AgentPack
 ├── scripts/
-│   └── smoke-test.sh    # Post-deploy smoke test
+│   ├── backup-db.sh     # Explicit pg_dump backup contract
+│   ├── smoke-test.sh    # Post-deploy smoke test
+│   ├── test-api.mjs     # Migration + fixture + API integration test
+│   └── validate-repo.rb # Offline repository/manifest policy checks
 ├── docker-compose.yml   # Local development
+├── package.json         # Root build/test/lint command contract
 └── skills.txt           # Skill manifest
 ```

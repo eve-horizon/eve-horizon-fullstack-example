@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fullstack-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  application:
+    name: Build, integration test and validate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app_dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install applications
+        run: npm run install:apps
+
+      - name: Build applications
+        run: npm run build
+
+      - name: Test migration, fixture and API
+        run: npm test
+
+      - name: Validate Compose and repository contracts
+        run: |
+          docker compose config --quiet
+          ruby scripts/validate-repo.rb
+          bash -n scripts/backup-db.sh scripts/smoke-test.sh
+
+      - name: Preview AgentPack resolution with the released CLI
+        run: npx --yes @eve-horizon/cli@0.2.72 packs resolve --dry-run --path .
+
+      - name: Reject private scope and credential-shaped values
+        run: |
+          if git grep -n -I -E \
+            'github\.com/Incept5|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY' \
+            -- . ':(exclude).github/workflows/ci.yml'; then
+            echo 'Private scope or credential-shaped value found' >&2
+            exit 1
+          fi
+
+  public-pack:
+    name: Anonymous factory materialisation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch the pinned public pack without credentials
+        env:
+          GH_TOKEN: ''
+          GITHUB_TOKEN: ''
+          GIT_CONFIG_NOSYSTEM: '1'
+          GIT_CONFIG_GLOBAL: /dev/null
+          GIT_TERMINAL_PROMPT: '0'
+        run: |
+          pin="$(ruby -ryaml -e 'm=YAML.safe_load(File.read(".eve/manifest.yaml"), aliases: true); puts m["x-eve"]["packs"].find { |p| p["source"] == "eve-horizon/eve-software-factory" }["ref"]')"
+          target="$(mktemp -d)/factory"
+          git -c credential.helper= init "$target"
+          git -C "$target" remote add origin https://github.com/eve-horizon/eve-software-factory.git
+          git -C "$target" -c credential.helper= fetch --depth=1 origin "$pin"
+          git -C "$target" checkout --detach FETCH_HEAD
+          test "$(git -C "$target" rev-parse HEAD)" = "$pin"
+          test -f "$target/eve/pack.yaml"
+          test -f "$target/eve/agents.yaml"
+          test -f "$target/eve/teams.yaml"
+          test -f "$target/eve/chat.yaml"
+          test -f "$target/skills/factory-pm/SKILL.md"

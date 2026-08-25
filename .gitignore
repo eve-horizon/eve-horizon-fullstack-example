@@ -3,6 +3,8 @@ dist/
 .env
 .DS_Store
 .agents/skills/
+.pi/
+artifacts/
 .claude
 
 # Eve secrets file - normally gitignored to protect sensitive data

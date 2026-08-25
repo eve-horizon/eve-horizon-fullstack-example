@@ -1,7 +1,7 @@
 # Eve Manifest - v2 Compose Specification
 # Defines services, environments, and deployment pipelines
 
-schema: eve/compose/v1
+schema: eve/compose/v2
 project: fullstack-example
 
 x-eve:
@@ -22,7 +22,8 @@ x-eve:
     config_path: ./agents/chat.yaml
   packs:
     - source: ./packs/notes-ops
-    - source: ../eve-software-factory
+    - source: eve-horizon/eve-software-factory
+      ref: 72ed321b9dee7ae497e7ff60486aa2e8657d365f
 
 # Optional: Override cluster's default domain for Ingress routing
 # If not set, uses EVE_DEFAULT_DOMAIN from the cluster config
@@ -51,6 +52,12 @@ services:
       api_spec:
         type: openapi
         spec_url: /openapi.json
+      object_store:
+        buckets:
+          - name: uploads
+            visibility: private
+          - name: assets
+            visibility: public
 
   web:
     build:
@@ -165,10 +172,6 @@ pipelines:
         depends_on: [build]
         script:
           run: npm test
-      - name: deploy-staging
-        depends_on: [test]
-        script:
-          run: eve deploy --env staging
 
   ci-feature:
     trigger:
@@ -202,14 +205,6 @@ pipelines:
 
 # Workflows - Manual and scheduled operations
 workflows:
-  manual-deploy:
-    manual: true
-    db_access: read_write
-    steps:
-      - name: deploy
-        script:
-          run: eve deploy
-
   db-backup:
     manual: true
     db_access: read_only

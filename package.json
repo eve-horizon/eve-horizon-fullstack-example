@@ -1,0 +1,14 @@
+{
+  "name": "eve-horizon-fullstack-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:apps": "npm ci --prefix apps/api && npm ci --prefix apps/web",
+    "build": "npm run build --prefix apps/api && npm run build --prefix apps/web",
+    "lint": "npm run build",
+    "test": "node scripts/test-api.mjs",
+    "validate": "ruby scripts/validate-repo.rb"
+  },
+  "license": "MIT"
+}
