@@ -1,0 +1,24 @@
+name: Bug report
+description: Report a problem with the Eve Horizon full-stack example
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Report vulnerabilities privately via SECURITY.md, not this form.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, Node, Docker, Postgres, and Eve CLI versions as relevant.
