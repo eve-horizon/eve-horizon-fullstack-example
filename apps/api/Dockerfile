@@ -39,17 +39,14 @@ WORKDIR /app
 LABEL org.opencontainers.image.source="https://github.com/eve-horizon/eve-horizon-fullstack-example"
 LABEL org.opencontainers.image.description="API service"
 
-# Create non-root user for security
-RUN groupadd --gid 1000 node || true \
-    && useradd --uid 1000 --gid node --shell /bin/bash --create-home node || true
-
 # Copy production artifacts
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
 
-# Security: run as non-root
-USER node
+# Run as the base image's node user, by number: under the strict security
+# profile the kubelet can only check runAsNonRoot against a numeric user.
+USER 1000:1000
 
 ENV NODE_ENV=production
 ENV PORT=3000

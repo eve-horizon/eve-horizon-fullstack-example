@@ -179,7 +179,6 @@ environments:
     pipeline: deploy-staging
   production:
     pipeline: deploy-production
-    approval: required
 
 # Pipelines with explicit step dependencies
 pipelines:

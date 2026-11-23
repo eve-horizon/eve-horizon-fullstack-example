@@ -30,20 +30,10 @@ LABEL org.opencontainers.image.description="Web frontend"
 # Copy built assets from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Custom nginx config for SPA routing
-RUN echo 'server { \
-    listen 80; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-    location /health { \
-        return 200 "ok"; \
-        add_header Content-Type text/plain; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# SPA routing plus an /api/ proxy to the private API. The image renders
+# templates into conf.d at start-up, filling in API_SERVICE_HOST.
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+ENV API_SERVICE_HOST=api
 
 EXPOSE 80
 

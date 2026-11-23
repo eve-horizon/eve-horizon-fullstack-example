@@ -11,7 +11,7 @@ environments, managed data, AgentPacks, and Docker-based deployments.
 **Environments:**
 - `test` - Integration testing
 - `staging` - Pre-production validation
-- `production` - Live environment (requires approval)
+- `production` - Live environment
 
 ## Eve Horizon Setup
 
@@ -139,7 +139,7 @@ docker build -t fullstack-example-web:local apps/web
 The `.eve/manifest.yaml` defines:
 
 - **services**: buildable api/web containers, a migration job, and managed Postgres
-- **environments**: test, staging, and approval-gated production targets
+- **environments**: test, staging, and production targets
 - **x-eve**: agent, chat, AgentPack, API-spec, and managed-database configuration
 - **object storage**: one private uploads bucket and one public assets bucket
 - **migrations**: SQL files mounted into the migration job
@@ -194,9 +194,23 @@ Deterministic pipelines run per environment:
 
 1. **deploy-test**: Build + release + deploy + smoke test
 2. **deploy-staging**: Build + release + deploy
-3. **deploy-production**: Build + release + deploy (approval required)
+3. **deploy-production**: Build + release + deploy
 
-Approvals are enforced at the pipeline boundary for production. Jobs targeting the same environment are gated.
+Eve has no deploy approval gate, so the manifest declares none: protect
+production through who may deploy to it.
+
+## Security Profiles
+
+The manifest is ready for Eve's `strict` security profile:
+
+- `web` is the only public service. Its nginx proxies `/api/` to `api`,
+  which declares `x-eve.ingress.public: false`.
+- `api` runs as a numeric user (`USER 1000:1000`) and reads the database
+  through the declared `app` role; only the `migrate` job uses the owner URL.
+- Stock nginx starts as root to bind port 80, so `web` opts out with
+  `run_as_root` and the capabilities nginx needs.
+- The `migrate` job uses Eve's migrate image, pinned to a platform release; it
+  runs as a numeric non-root user.
 
 ## Image Builds
 
