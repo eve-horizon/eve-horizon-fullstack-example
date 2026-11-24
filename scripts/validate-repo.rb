@@ -80,6 +80,23 @@ fail!("object-bucket example drifted") unless buckets == [
   { "name" => "assets", "visibility" => "public" }
 ]
 
+# Strict security profile readiness (README "Security Profiles").
+services.each do |name, service|
+  if service.key?("ports") && !service.dig("x-eve", "ingress")
+    fail!("#{name}: a service with ports must declare x-eve.ingress (public: true or false)")
+  end
+  next if service.dig("x-eve", "role") == "job"
+  owner_credential = service.fetch("environment", {}).to_h.values.join(" ").match?(/\$\{managed\.[\w-]+\.(url|password)\}/)
+  fail!("#{name}: long-running services read the database through a declared role, not the owner URL") if owner_credential
+end
+manifest.fetch("environments", {}).each do |name, environment|
+  fail!("environments.#{name}: Eve has no deploy approval gate; remove approval") if environment.is_a?(Hash) && environment.key?("approval")
+end
+migrate_image = services.dig("migrate", "image").to_s
+fail!("migrate must use Eve's migrate image from GHCR at a pinned version") unless migrate_image.match?(%r{\Aghcr\.io/eve-horizon/eve-horizon/migrate:\d+\.\d+\.\d+\z})
+api_user = root.join("apps/api/Dockerfile").read(encoding: "UTF-8").scan(/^USER\s+(\S+)/).flatten.last
+fail!("api image must run as a numeric non-root user (uid or uid:gid)") unless api_user&.match?(/\A[1-9]\d*(:\d+)?\z/)
+
 migration_sources = services.dig("migrate", "x-eve", "files") || []
 migration_sources.each do |entry|
   fail!("migration source missing: #{entry['source']}") unless root.join(entry["source"]).directory?
@@ -120,4 +137,4 @@ root.join("skills.txt").read.each_line do |line|
   end
 end
 
-puts "Repository validation passed: public pack pin, vendored runtime skills, manifest, pipelines, buckets, migrations and fixtures"
+puts "Repository validation passed: public pack pin, vendored runtime skills, manifest, strict readiness, pipelines, buckets, migrations and fixtures"

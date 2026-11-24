@@ -68,7 +68,7 @@ jobs:
       - name: Reject private scope and credential-shaped values
         run: |
           if git grep -n -I -E \
-            'github\.com/Incept5|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY' \
+            'github\.com/Incept5|public\.ecr\.aws/w7c4v0w3|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY' \
             -- . ':(exclude).github/workflows/ci.yml'; then
             echo 'Private scope or credential-shaped value found' >&2
             exit 1
